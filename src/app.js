@@ -94,7 +94,6 @@ function createApp() {
   app.get('/healthz', (req, res) => res.json({ ok: true }));
 
   // ============ GOOGLE OAUTH ============
-  console.log('GOOGLE_CLIENT_ID set:', !!process.env.GOOGLE_CLIENT_ID);
   if (process.env.GOOGLE_CLIENT_ID) {
     const callbackURL = (process.env.APP_URL || '') + '/auth/google/callback';
     passport.use(new GoogleStrategy(
