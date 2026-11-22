@@ -1,6 +1,8 @@
 'use strict';
 const express = require('express');
 const session = require('express-session');
+const passport = require('passport');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const path = require('path');
 const { pool, tx } = require('./db');
 const bt = require('./businessTime');
@@ -90,6 +92,36 @@ function createApp() {
   }));
   app.use(express.static(path.join(__dirname, '..', 'public')));
   app.get('/healthz', (req, res) => res.json({ ok: true }));
+
+  // ============ GOOGLE OAUTH ============
+  if (process.env.GOOGLE_CLIENT_ID) {
+    const callbackURL = (process.env.APP_URL || '') + '/auth/google/callback';
+    passport.use(new GoogleStrategy(
+      { clientID: process.env.GOOGLE_CLIENT_ID, clientSecret: process.env.GOOGLE_CLIENT_SECRET, callbackURL },
+      async (accessToken, refreshToken, profile, done) => {
+        try {
+          const email = profile.emails[0].value.toLowerCase();
+          const name = profile.displayName;
+          // Find agent by email, or create one so any Google user can demo the app
+          const { rows } = await pool.query('SELECT id, name FROM agents WHERE lower(email)=$1', [email]);
+          let agent = rows[0];
+          if (!agent) {
+            const ins = await pool.query(
+              'INSERT INTO agents(name, email) VALUES ($1,$2) ON CONFLICT (email) DO UPDATE SET name=EXCLUDED.name RETURNING id, name',
+              [name, email]);
+            agent = ins.rows[0];
+          }
+          done(null, agent);
+        } catch (e) { done(e); }
+      }
+    ));
+    app.use(passport.initialize());
+    app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'], session: false }));
+    app.get('/auth/google/callback',
+      passport.authenticate('google', { session: false, failureRedirect: '/login.html?error=google' }),
+      (req, res) => { req.session.agentId = req.user.id; res.redirect('/'); }
+    );
+  }
 
   // ============ AUTH ============
   app.post('/api/auth/login', wrap(async (req, res) => {

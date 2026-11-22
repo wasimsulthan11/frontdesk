@@ -16,46 +16,67 @@
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-size:15px;display:flex;align-items:center;justify-content:center;min-height:100vh}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:36px 32px;width:min(380px,94vw)}
-h1{margin:0 0 6px;font-size:22px;letter-spacing:.2px}
-p.sub{margin:0 0 24px;color:var(--muted);font-size:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:36px 32px;width:min(400px,94vw)}
+h1{margin:0 0 4px;font-size:22px}
+p.sub{margin:0 0 28px;color:var(--muted);font-size:14px}
+.google-btn{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit;font-size:15px;font-weight:500;cursor:pointer;text-decoration:none;transition:box-shadow .15s}
+.google-btn:hover{box-shadow:0 2px 8px color-mix(in srgb,var(--ink) 12%,transparent)}
+.google-btn svg{flex-shrink:0}
+.divider{display:flex;align-items:center;gap:10px;margin:20px 0;color:var(--muted);font-size:13px}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--line)}
 label{display:block;font-size:14px;color:var(--muted);margin-bottom:3px}
-input{width:100%;border:1px solid var(--line);border-radius:6px;padding:9px 11px;font:inherit;color:inherit;background:var(--bg);margin-bottom:14px}
+input{width:100%;border:1px solid var(--line);border-radius:6px;padding:9px 11px;font:inherit;color:inherit;background:var(--bg);margin-bottom:12px}
 input:focus{outline:2px solid var(--accent);outline-offset:2px;border-color:transparent}
-button{width:100%;padding:10px;border:none;border-radius:6px;background:var(--accent);color:var(--accent-ink);font:inherit;font-weight:600;font-size:15px;cursor:pointer;margin-top:4px}
-button:hover{opacity:.88}
-button:disabled{opacity:.5;cursor:not-allowed}
-.hint{margin-top:18px;padding:11px 13px;background:color-mix(in srgb,var(--accent) 10%,var(--surface));border-radius:8px;font-size:13px;color:var(--muted);line-height:1.6}
+.submit-btn{width:100%;padding:10px;border:none;border-radius:6px;background:var(--accent);color:var(--accent-ink);font:inherit;font-weight:600;font-size:15px;cursor:pointer}
+.submit-btn:hover{opacity:.88}
+.submit-btn:disabled{opacity:.5;cursor:not-allowed}
+#err{color:var(--late);font-size:13px;min-height:18px;margin-bottom:8px}
+.hint{margin-top:20px;padding:11px 13px;background:color-mix(in srgb,var(--accent) 8%,var(--surface));border-radius:8px;font-size:13px;color:var(--muted);line-height:1.6}
 .hint code{font-family:monospace;color:var(--ink);background:color-mix(in srgb,var(--accent) 15%,var(--surface));padding:1px 5px;border-radius:4px}
-#err{color:var(--late);font-size:14px;min-height:20px;margin-bottom:8px}
 </style>
 </head>
 <body>
 <div class="card">
   <h1>Frontdesk</h1>
   <p class="sub">Support ticket system</p>
+
+  <a href="/auth/google" class="google-btn">
+    <svg width="20" height="20" viewBox="0 0 48 48">
+      <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.2l6.8-6.8C35.8 2.4 30.3 0 24 0 14.7 0 6.7 5.5 2.9 13.6l7.9 6.1C12.6 13.6 17.9 9.5 24 9.5z"/>
+      <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17z"/>
+      <path fill="#FBBC05" d="M10.8 28.3A14.5 14.5 0 0 1 9.5 24c0-1.5.3-2.9.7-4.3L2.3 13.6A23.9 23.9 0 0 0 0 24c0 3.8.9 7.4 2.5 10.6l8.3-6.3z"/>
+      <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.9 2.3-8.4 2.3-6.1 0-11.4-4.1-13.2-9.6L2.5 35.4C6.4 42.6 14.6 48 24 48z"/>
+    </svg>
+    Sign in with Google
+  </a>
+
+  <div class="divider">or use a demo agent account</div>
+
   <form id="form">
     <label for="email">Email</label>
     <input id="email" type="email" required placeholder="meera@arvo.test" autocomplete="email">
     <label for="password">Password</label>
     <input id="password" type="password" required autocomplete="current-password">
     <div id="err"></div>
-    <button type="submit" id="btn">Log in</button>
+    <button type="submit" class="submit-btn" id="btn">Log in</button>
   </form>
+
   <div class="hint">
-    <strong>Demo credentials</strong><br>
-    Any agent email + password <code>demo</code><br>
-    e.g. <code>meera@arvo.test</code> / <code>demo</code>
+    Demo agent accounts — password <code>demo</code> for all<br>
+    e.g. <code>meera@arvo.test</code> · <code>arun@arvo.test</code> · <code>priya@arvo.test</code>
   </div>
 </div>
 <script>
+const params = new URLSearchParams(location.search);
+if (params.get('error') === 'google') {
+  document.getElementById('err').textContent = 'Google sign-in failed. Please try again.';
+}
 document.getElementById('form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const err = document.getElementById('err');
   const btn = document.getElementById('btn');
   err.textContent = '';
-  btn.disabled = true;
-  btn.textContent = 'Logging in…';
+  btn.disabled = true; btn.textContent = 'Logging in…';
   try {
     const r = await fetch('/api/auth/login', {
       method: 'POST',
@@ -66,7 +87,7 @@ document.getElementById('form').addEventListener('submit', async (e) => {
     const j = await r.json().catch(() => ({}));
     if (!r.ok) { err.textContent = j.error || 'Login failed'; btn.disabled = false; btn.textContent = 'Log in'; return; }
     location.href = '/';
-  } catch (ex) { err.textContent = 'Network error, please try again'; btn.disabled = false; btn.textContent = 'Log in'; }
+  } catch (ex) { err.textContent = 'Network error'; btn.disabled = false; btn.textContent = 'Log in'; }
 });
 </script>
 </body>
