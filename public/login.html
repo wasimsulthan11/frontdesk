@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Frontdesk – Log in</title>
+<style>
+:root{
+  --bg:#e9eef2; --surface:#fff; --ink:#14202b; --muted:#5a6b7a; --line:#d3dce4;
+  --accent:#0b6e8a; --accent-ink:#fff; --late:#b3261e;
+  font-family: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#0f161c; --surface:#18222b; --ink:#e6edf3; --muted:#93a4b3; --line:#2b3947;
+    --accent:#4fb4d0; --accent-ink:#06222b; }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-size:15px;display:flex;align-items:center;justify-content:center;min-height:100vh}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:36px 32px;width:min(380px,94vw)}
+h1{margin:0 0 6px;font-size:22px;letter-spacing:.2px}
+p.sub{margin:0 0 24px;color:var(--muted);font-size:14px}
+label{display:block;font-size:14px;color:var(--muted);margin-bottom:3px}
+input{width:100%;border:1px solid var(--line);border-radius:6px;padding:9px 11px;font:inherit;color:inherit;background:var(--bg);margin-bottom:14px}
+input:focus{outline:2px solid var(--accent);outline-offset:2px;border-color:transparent}
+button{width:100%;padding:10px;border:none;border-radius:6px;background:var(--accent);color:var(--accent-ink);font:inherit;font-weight:600;font-size:15px;cursor:pointer;margin-top:4px}
+button:hover{opacity:.88}
+button:disabled{opacity:.5;cursor:not-allowed}
+.hint{margin-top:18px;padding:11px 13px;background:color-mix(in srgb,var(--accent) 10%,var(--surface));border-radius:8px;font-size:13px;color:var(--muted);line-height:1.6}
+.hint code{font-family:monospace;color:var(--ink);background:color-mix(in srgb,var(--accent) 15%,var(--surface));padding:1px 5px;border-radius:4px}
+#err{color:var(--late);font-size:14px;min-height:20px;margin-bottom:8px}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Frontdesk</h1>
+  <p class="sub">Support ticket system</p>
+  <form id="form">
+    <label for="email">Email</label>
+    <input id="email" type="email" required placeholder="meera@arvo.test" autocomplete="email">
+    <label for="password">Password</label>
+    <input id="password" type="password" required autocomplete="current-password">
+    <div id="err"></div>
+    <button type="submit" id="btn">Log in</button>
+  </form>
+  <div class="hint">
+    <strong>Demo credentials</strong><br>
+    Any agent email + password <code>demo</code><br>
+    e.g. <code>meera@arvo.test</code> / <code>demo</code>
+  </div>
+</div>
+<script>
+document.getElementById('form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const err = document.getElementById('err');
+  const btn = document.getElementById('btn');
+  err.textContent = '';
+  btn.disabled = true;
+  btn.textContent = 'Logging in…';
+  try {
+    const r = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: document.getElementById('email').value, password: document.getElementById('password').value }),
+      credentials: 'same-origin'
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) { err.textContent = j.error || 'Login failed'; btn.disabled = false; btn.textContent = 'Log in'; return; }
+    location.href = '/';
+  } catch (ex) { err.textContent = 'Network error, please try again'; btn.disabled = false; btn.textContent = 'Log in'; }
+});
+</script>
+</body>
+</html>

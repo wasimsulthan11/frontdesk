@@ -84,10 +84,10 @@ dialog input,dialog select,dialog textarea{width:100%}
 <body>
 <header>
   <h1>Frontdesk</h1>
-  <label for="agent" style="color:var(--muted)">Working as</label>
-  <select id="agent"></select>
+  <span id="agentName" style="color:var(--muted);font-weight:600"></span>
   <span class="spacer"></span>
   <button class="btn" id="newBtn">Add test ticket</button>
+  <button class="btn" id="logoutBtn">Log out</button>
 </header>
 
 <main>
@@ -127,7 +127,7 @@ dialog input,dialog select,dialog textarea{width:100%}
 <script>
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const state = { agent: localStorage.getItem('agent') || '', scope: 'mine', selected: null, mode: 'public', draft: '' };
+const state = { agent: '', scope: 'mine', selected: null, mode: 'public', draft: '' };
 const PRIO = { critical: 'Cannot work', medium: 'Medium', low: 'Small' };
 const STATUS = { open: 'Open', in_progress: 'In progress', waiting_customer: 'Waiting on customer', resolved: 'Resolved', closed: 'Closed' };
 
@@ -137,7 +137,7 @@ const mins = (m) => m >= 60 ? `${Math.floor(m / 60)}h ${Math.round(m % 60)}m` : 
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.style.display = 'block'; clearTimeout(toast.t); toast.t = setTimeout(() => t.style.display = 'none', 4000); }
 
 async function call(prefix, method, url, body) {
-  const r = await fetch(prefix + url, { method, headers: { 'content-type': 'application/json', 'x-agent-id': state.agent }, body: body ? JSON.stringify(body) : undefined });
+  const r = await fetch(prefix + url, { method, headers: { 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined, credentials: 'same-origin' });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(j.error || r.statusText);
   return j;
@@ -160,10 +160,8 @@ function badges(t) {
 }
 
 async function loadAgents() {
-  const agents = await fetch('/api/agents').then((r) => r.json());
-  $('#agent').innerHTML = agents.map((a) => `<option value="${a.id}">${esc(a.name)}</option>`).join('');
-  if (!agents.some((a) => String(a.id) === state.agent)) state.agent = String(agents[0].id);
-  $('#agent').value = state.agent;
+  // agent list still used by the assign picker inside ticket detail
+  return fetch('/api/agents').then((r) => r.json());
 }
 
 async function loadList() {
@@ -268,7 +266,6 @@ function wireDetail(t) {
 
 $('#list').addEventListener('click', (e) => { const r = e.target.closest('.row'); if (r) { state.mode = 'public'; openTicket(Number(r.dataset.id)); } });
 $('#tabs').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { state.scope = b.dataset.scope; loadList(); } });
-$('#agent').onchange = (e) => { state.agent = e.target.value; localStorage.setItem('agent', state.agent); state.selected = null; $('#detail').innerHTML = '<div class="empty">Choose a ticket to read the thread and reply.</div>'; loadList(); };
 $('#newBtn').onclick = () => $('#newDlg').showModal();
 $('#newForm').addEventListener('submit', async (e) => {
   if (e.submitter?.value !== 'ok') return;
@@ -279,7 +276,18 @@ $('#newForm').addEventListener('submit', async (e) => {
   } catch (err) { toast(err.message); }
 });
 
-(async () => { await loadAgents(); await loadList(); setInterval(() => { if (!document.hidden) loadList(); }, 30000); })();
+(async () => {
+  const me = await fetch('/api/auth/me', { credentials: 'same-origin' }).then((r) => r.json()).catch(() => ({}));
+  if (!me.id) { location.href = '/login.html'; return; }
+  state.agent = String(me.id);
+  $('#agentName').textContent = me.name;
+  $('#logoutBtn').onclick = async () => {
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
+    location.href = '/login.html';
+  };
+  await loadList();
+  setInterval(() => { if (!document.hidden) loadList(); }, 30000);
+})();
 </script>
 </body>
 </html>

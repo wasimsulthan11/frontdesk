@@ -1,5 +1,6 @@
 'use strict';
 const express = require('express');
+const session = require('express-session');
 const path = require('path');
 const { pool, tx } = require('./db');
 const bt = require('./businessTime');
@@ -79,9 +80,39 @@ async function customerTicket(req, c) {
 
 function createApp() {
   const app = express();
+  app.set('trust proxy', 1);
   app.use(express.json({ limit: '100kb' }));
+  app.use(session({
+    secret: process.env.SESSION_SECRET || 'frontdesk-dev-secret',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { httpOnly: true, sameSite: 'lax', maxAge: 8 * 60 * 60 * 1000 }
+  }));
   app.use(express.static(path.join(__dirname, '..', 'public')));
   app.get('/healthz', (req, res) => res.json({ ok: true }));
+
+  // ============ AUTH ============
+  app.post('/api/auth/login', wrap(async (req, res) => {
+    const email = str(req.body.email, 'email').toLowerCase();
+    const password = str(req.body.password, 'password');
+    const { rows } = await pool.query('SELECT id, name FROM agents WHERE lower(email)=$1', [email]);
+    if (!rows[0] || password !== (process.env.AGENT_PASSWORD || 'demo')) {
+      throw new HttpError(401, 'Invalid email or password');
+    }
+    req.session.agentId = rows[0].id;
+    res.json({ id: rows[0].id, name: rows[0].name });
+  }));
+
+  app.post('/api/auth/logout', (req, res) => {
+    req.session.destroy(() => res.json({ ok: true }));
+  });
+
+  app.get('/api/auth/me', wrap(async (req, res) => {
+    if (!req.session?.agentId) throw new HttpError(401, 'Not logged in');
+    const { rows } = await pool.query('SELECT id, name FROM agents WHERE id=$1', [req.session.agentId]);
+    if (!rows[0]) throw new HttpError(401, 'Unknown agent');
+    res.json(rows[0]);
+  }));
 
   // =============== CUSTOMER API ===============
   const cust = express.Router();
@@ -186,8 +217,8 @@ function createApp() {
 
   agent.use(async (req, res, next) => {
     try {
-      const id = Number(req.get('x-agent-id'));
-      if (!Number.isInteger(id)) throw new HttpError(401, 'Choose an agent first');
+      const id = req.session?.agentId;
+      if (!Number.isInteger(id)) throw new HttpError(401, 'Please log in');
       const { rows } = await pool.query('SELECT id, name FROM agents WHERE id=$1', [id]);
       if (!rows[0]) throw new HttpError(401, 'Unknown agent');
       req.agent = rows[0];
